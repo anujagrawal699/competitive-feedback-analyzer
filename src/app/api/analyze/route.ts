@@ -33,6 +33,12 @@ export async function POST(request: NextRequest) {
       } else if (error.message.includes('CORS') || error.message.includes('network restrictions')) {
         errorMessage = 'Network restriction error';
         details = 'App Store data fetching may be restricted in the deployment environment. Google Play Store should work fine.';
+      } else if (error.message.includes('not found in') && error.message.includes('App Store')) {
+        errorMessage = 'App not found';
+        details = error.message;
+      } else if (error.message.includes('No reviews found')) {
+        errorMessage = 'No reviews available';
+        details = error.message;
       } else if (error.message.includes('not found')) {
         errorMessage = 'App not found';
         details = error.message;

@@ -7,6 +7,30 @@ export async function scrapeAppStoreReviews(
 ): Promise<Review[]> {
   console.log(`Fetching ${num} App Store reviews for ${appId}...`);
 
+  // First, verify the app exists
+  try {
+    const lookupUrl = `https://itunes.apple.com/lookup?id=${appId}&country=${country}`;
+    const lookupResponse = await fetch(lookupUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+    
+    if (lookupResponse.ok) {
+      const lookupData = await lookupResponse.json();
+      if (lookupData.resultCount === 0) {
+        throw new Error(`App with ID ${appId} not found in ${country.toUpperCase()} App Store. Please verify the app ID is correct and the app is available in this region.`);
+      }
+      console.log(`App found: ${lookupData.results[0]?.trackName || 'Unknown'}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw error;
+    }
+    // If lookup fails, continue with reviews (might be network issue)
+    console.log('App lookup failed, proceeding with review fetch...');
+  }
+
   const reviews: Review[] = [];
   // Limit pages for serverless deployment to avoid timeouts
   const maxPages = Math.min(Math.ceil(num / 50), 3); // Max 3 pages for reliability
@@ -81,7 +105,7 @@ export async function scrapeAppStoreReviews(
   }
 
   if (reviews.length === 0) {
-    throw new Error(`No reviews found for App Store app ${appId}. The app may be new, have no reviews, or the app ID may be incorrect.`);
+    throw new Error(`No reviews found for App Store app ${appId}. This usually means: (1) The app has no reviews yet, (2) The app is very new, or (3) Reviews are not available in the ${country.toUpperCase()} region. Try checking the app directly in the App Store.`);
   }
 
   console.log(`Successfully parsed ${reviews.length} reviews from App Store`);

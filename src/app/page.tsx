@@ -179,7 +179,7 @@ export default function Home() {
                     <div className="text-xs text-slate-400 mb-2">Format: numerical ID</div>
                     <div className="flex flex-col space-y-1">
           <button onClick={()=>{setSource('app-store'); setYourAppId('310633997'); setCompetitorId('389801252');}} className="text-left text-indigo-600 hover:underline text-sm">WhatsApp (310633997) vs Instagram</button>
-          <button onClick={()=>{setSource('app-store'); setYourAppId('324684580'); setCompetitorId('1065249007');}} className="text-left text-indigo-600 hover:underline text-sm">Spotify vs Apple Music</button>
+          <button onClick={()=>{setSource('app-store'); setYourAppId('324684580'); setCompetitorId('1108187390');}} className="text-left text-indigo-600 hover:underline text-sm">Spotify vs Apple Music</button>
           <button onClick={()=>{setSource('app-store'); setYourAppId('363590051'); setCompetitorId('545519333');}} className="text-left text-indigo-600 hover:underline text-sm">Netflix vs Prime Video</button>
                     </div>
                   </div>
