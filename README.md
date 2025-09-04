@@ -2,7 +2,7 @@
 
 > Transform app store reviews into competitive intelligence
 
-## Why We Built This
+## Why
 
 Product teams spend hours manually sifting through competitor reviews to understand what users really think. We wanted to automate this tedious process and surface actionable insights in minutes, not days.
 
@@ -45,7 +45,6 @@ Open [http://localhost:3000](http://localhost:3000) and try these examples:
 - **Google Play**: WhatsApp (`com.whatsapp`) vs Instagram (`com.instagram.android`)
 - **App Store**: Netflix (`363590051`) vs Prime Video (`545519333`)
 
-## 🎮 How to Use
 ## Features
 
 - **Multi-Page Scraping**: Fetches up to 100 reviews per app for comprehensive analysis

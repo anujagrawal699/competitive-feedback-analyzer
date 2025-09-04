@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  Search,
   Star,
   TrendingUp,
   MessageSquare,

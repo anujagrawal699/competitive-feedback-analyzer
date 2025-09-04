@@ -1,6 +1,24 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Review, ReviewCluster, AppAnalysis, CompetitiveAnalysis, CompetitiveInsight, Recommendation, MarketPosition, ThemeComparison, ComparisonSummary } from "@/types/review";
 
+interface ClusterResponse {
+  theme?: string;
+  summary?: string;
+  reviewNumbers?: number[];
+  sentiment?: string;
+  avgRating?: number;
+}
+
+interface AIResponse {
+  clusters?: ClusterResponse[];
+}
+
+interface CompetitiveAIResponse {
+  insights?: Record<string, unknown>[];
+  recommendations?: Record<string, unknown>[];
+  marketPosition?: Record<string, unknown>;
+}
+
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-1.5-flash";
 
@@ -81,14 +99,14 @@ JSON:`;
   const result = await model.generateContent([{ text: prompt }]);
   const responseText = result.response.text().trim();
 
-  const parsed = extractJson(responseText);
+  const parsed: AIResponse = extractJson(responseText);
   if (!parsed?.clusters || !Array.isArray(parsed.clusters)) {
     throw new Error("Invalid AI response format");
   }
 
   const clusters: ReviewCluster[] = parsed.clusters
     .slice(0, 6)
-    .map((cluster: any, index: number) => {
+    .map((cluster: ClusterResponse, index: number) => {
       const matchedReviews = (cluster.reviewNumbers || [])
         .map((num: number) => validReviews[num - 1])
         .filter(Boolean)
@@ -181,19 +199,19 @@ JSON:`;
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
   const result = await model.generateContent([{ text: prompt }]);
   const raw = result.response.text().trim();
-  let parsed: any;
+  let parsed: CompetitiveAIResponse;
   try {
     parsed = extractJson(raw);
-  } catch (e) {
+  } catch {
     // Fallback minimal structure
     parsed = {};
   }
 
-  const insights: CompetitiveInsight[] = (parsed.insights || []).slice(0, 8).map((ins: any, i: number) => ({
+  const insights: CompetitiveInsight[] = (parsed.insights || []).slice(0, 8).map((ins: Record<string, unknown>, i: number) => ({
     id: `ins-${i}`,
     type: ins.type === 'strength' || ins.type === 'weakness' || ins.type === 'opportunity' || ins.type === 'threat' ? ins.type : 'opportunity',
-    category: ins.category || 'general',
-    description: ins.description || 'Insight unavailable',
+    category: typeof ins.category === 'string' ? ins.category : 'general',
+    description: typeof ins.description === 'string' ? ins.description : 'Insight unavailable',
     evidence: Array.isArray(ins.evidence) ? ins.evidence.slice(0, 6) : [],
     priority: ins.priority === 'high' || ins.priority === 'low' ? ins.priority : 'medium',
     theme: typeof ins.theme === 'string' ? ins.theme : undefined,
@@ -202,17 +220,17 @@ JSON:`;
     ratingDelta: typeof ins.ratingDelta === 'number' ? ins.ratingDelta : (typeof ins.yourRating === 'number' && typeof ins.competitorRating === 'number' ? ins.yourRating - ins.competitorRating : undefined),
     yourCount: typeof ins.yourCount === 'number' ? ins.yourCount : undefined,
     competitorCount: typeof ins.competitorCount === 'number' ? ins.competitorCount : undefined,
-    sentiment: ['positive','neutral','negative'].includes(ins.sentiment) ? ins.sentiment : undefined,
+    sentiment: typeof ins.sentiment === 'string' && ['positive','neutral','negative'].includes(ins.sentiment) ? ins.sentiment as 'positive' | 'neutral' | 'negative' : undefined,
     confidence: typeof ins.confidence === 'number' ? Math.max(0, Math.min(1, ins.confidence)) : undefined
   }));
 
-  const recommendations: Recommendation[] = (parsed.recommendations || []).slice(0, 7).map((r: any, i: number) => ({
+  const recommendations: Recommendation[] = (parsed.recommendations || []).slice(0, 7).map((r: Record<string, unknown>, i: number) => ({
     id: `rec-${i}`,
-    title: r.title || 'Improve User Experience',
-    description: r.description || 'Refine onboarding and address key pain themes.',
+    title: typeof r.title === 'string' ? r.title : 'Improve User Experience',
+    description: typeof r.description === 'string' ? r.description : 'Refine onboarding and address key pain themes.',
     impact: r.impact === 'high' || r.impact === 'low' ? r.impact : 'medium',
     effort: r.effort === 'high' || r.effort === 'low' ? r.effort : 'medium',
-    category: r.category || 'feature',
+    category: typeof r.category === 'string' ? r.category : 'feature',
     basedOn: Array.isArray(r.basedOn) ? r.basedOn.slice(0, 6) : [],
     metric: typeof r.metric === 'string' ? r.metric : undefined,
     expectedImpact: typeof r.expectedImpact === 'string' ? r.expectedImpact : undefined,
@@ -222,12 +240,16 @@ JSON:`;
   }));
 
   const marketPosition: MarketPosition = {
-    rank: parsed.marketPosition?.rank || computeSingleRank(your, competitor),
+    rank: typeof parsed.marketPosition?.rank === 'number' ? parsed.marketPosition.rank : computeSingleRank(your, competitor),
     totalApps: 2,
-    ratingComparison: parsed.marketPosition?.ratingComparison || relativeBucketSingle(your.averageRating, competitor.averageRating),
-    volumeComparison: parsed.marketPosition?.volumeComparison || relativeBucketSingle(your.totalReviews, competitor.totalReviews),
-    uniqueStrengths: parsed.marketPosition?.uniqueStrengths || deriveUniqueThemesSingle(your, competitor),
-    competitiveGaps: parsed.marketPosition?.competitiveGaps || deriveGapThemesSingle(your, competitor)
+    ratingComparison: typeof parsed.marketPosition?.ratingComparison === 'string' && ['above', 'below', 'average'].includes(parsed.marketPosition.ratingComparison) 
+      ? parsed.marketPosition.ratingComparison as 'above' | 'below' | 'average'
+      : relativeBucketSingle(your.averageRating, competitor.averageRating),
+    volumeComparison: typeof parsed.marketPosition?.volumeComparison === 'string' && ['above', 'below', 'average'].includes(parsed.marketPosition.volumeComparison)
+      ? parsed.marketPosition.volumeComparison as 'above' | 'below' | 'average'
+      : relativeBucketSingle(your.totalReviews, competitor.totalReviews),
+    uniqueStrengths: Array.isArray(parsed.marketPosition?.uniqueStrengths) ? parsed.marketPosition.uniqueStrengths : deriveUniqueThemesSingle(your, competitor),
+    competitiveGaps: Array.isArray(parsed.marketPosition?.competitiveGaps) ? parsed.marketPosition.competitiveGaps : deriveGapThemesSingle(your, competitor)
   };
 
   // Build theme comparison objects (classification local, not AI)
@@ -280,7 +302,7 @@ function truncate(text: string, maxLength: number): string {
   return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 }
 
-function extractJson(text: string): any {
+function extractJson(text: string): Record<string, unknown> {
   try {
     // Remove markdown code blocks if present
     const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();

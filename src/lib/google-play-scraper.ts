@@ -1,12 +1,31 @@
 import { Review } from "@/types/review";
 
-let gplay: any = null;
+interface GooglePlayReview {
+  userName?: string;
+  score?: number;
+  date?: string | Date;
+  text?: string;
+}
 
-async function getGplayModule() {
+interface GooglePlayAppDetails {
+  title?: string;
+  icon?: string;
+  developer?: string;
+}
+
+interface GooglePlayModule {
+  reviews: (options: Record<string, unknown>) => Promise<{ data: GooglePlayReview[] }>;
+  app: (options: Record<string, unknown>) => Promise<GooglePlayAppDetails>;
+  sort?: Record<string, unknown>;
+}
+
+let gplay: GooglePlayModule | null = null;
+
+async function getGplayModule(): Promise<GooglePlayModule> {
   if (gplay) return gplay;
 
   const imported = await import("google-play-scraper");
-  const mod = (imported as any).default;
+  const mod = (imported as Record<string, unknown>).default as GooglePlayModule;
 
   if (!mod || !mod.reviews || !mod.app) {
     console.error(
@@ -94,9 +113,9 @@ export async function getAppDetails(
     }
 
     return {
-      title: appDetails.title || "Unknown App",
-      icon: appDetails.icon || "",
-      developer: appDetails.developer || "Unknown Developer",
+      title: typeof appDetails.title === 'string' ? appDetails.title : "Unknown App",
+      icon: typeof appDetails.icon === 'string' ? appDetails.icon : "",
+      developer: typeof appDetails.developer === 'string' ? appDetails.developer : "Unknown Developer",
     };
   } catch (error) {
     if (error instanceof Error && error.message.includes('App not found')) {
