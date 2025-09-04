@@ -17,7 +17,7 @@ async function analyzeSingleApp(appId: string, source: "google-play" | "app-stor
     reviews = await scrapeGooglePlayReviews(appId, "en", "us", 100);
     appDetails = await getAppDetails(appId);
   } else {
-    reviews = await scrapeAppStoreReviews(appId, "us", 100);
+    reviews = await scrapeAppStoreReviews(appId, "us", 50);
     appDetails = await getAppStoreAppDetails(appId);
   }
 

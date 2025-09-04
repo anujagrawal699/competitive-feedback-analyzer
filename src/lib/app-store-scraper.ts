@@ -8,18 +8,28 @@ export async function scrapeAppStoreReviews(
   console.log(`Fetching ${num} App Store reviews for ${appId}...`);
 
   const reviews: Review[] = [];
-  const maxPages = Math.ceil(num / 50); // Each page has ~50 reviews
+  // Limit pages for serverless deployment to avoid timeouts
+  const maxPages = Math.min(Math.ceil(num / 50), 3); // Max 3 pages for reliability
   
   for (let page = 1; page <= maxPages && reviews.length < num; page++) {
     const rssUrl = `https://itunes.apple.com/${country}/rss/customerreviews/page=${page}/id=${appId}/sortby=mostrecent/xml`;
 
     try {
+      // Add timeout and better headers for serverless environments
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
       const response = await fetch(rssUrl, {
+        signal: controller.signal,
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+          "Accept": "application/rss+xml, application/xml, text/xml",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Cache-Control": "no-cache",
         },
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -43,13 +53,24 @@ export async function scrapeAppStoreReviews(
       const pageReviews = parseAppStoreEntries(entryMatches, appId, reviews.length);
       reviews.push(...pageReviews);
       
-      // Small delay between requests to be respectful
+      // Shorter delay for serverless environments
       if (page < maxPages) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log(`Request timeout for page ${page}, stopping fetch`);
+        if (page === 1) {
+          throw new Error(`App Store request timed out for app ${appId}. This may be due to network restrictions in the deployment environment.`);
+        }
+        break;
+      }
+      
       if (page === 1) {
-        // If first page fails, rethrow the error
+        // If first page fails, provide better error message
+        if (error instanceof Error && error.message.includes('fetch')) {
+          throw new Error(`Network error fetching App Store data for ${appId}. This may be due to CORS or network restrictions in the deployment environment.`);
+        }
         throw error;
       } else {
         // If subsequent pages fail, just stop fetching
@@ -117,27 +138,49 @@ export async function getAppStoreAppDetails(
   console.log(`Fetching App Store app details for ${appId}...`);
 
   const lookupUrl = `https://itunes.apple.com/lookup?id=${appId}`;
-  const response = await fetch(lookupUrl);
+  
+  // Add timeout for serverless environments
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 second timeout
 
-  if (!response.ok) {
-    if (response.status === 404) {
+  try {
+    const response = await fetch(lookupUrl, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+        "Cache-Control": "no-cache",
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`App Store app not found: ${appId}. Please verify the app ID is correct.`);
+      }
+      throw new Error(`Failed to fetch app details: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
       throw new Error(`App Store app not found: ${appId}. Please verify the app ID is correct.`);
     }
-    throw new Error(`Failed to fetch app details: ${response.status} ${response.statusText}`);
+
+    const app = data.results[0];
+    console.log(`Found app: ${app.trackName}`);
+
+    return {
+      title: app.trackName || "Unknown App",
+      icon: app.artworkUrl100 || "",
+      developer: app.artistName || "Unknown Developer",
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Timeout fetching App Store app details for ${appId}. This may be due to network restrictions in the deployment environment.`);
+    }
+    throw error;
   }
-
-  const data = await response.json();
-
-  if (!data.results || data.results.length === 0) {
-    throw new Error(`App Store app not found: ${appId}. Please verify the app ID is correct.`);
-  }
-
-  const app = data.results[0];
-  console.log(`Found app: ${app.trackName}`);
-
-  return {
-    title: app.trackName || "Unknown App",
-    icon: app.artworkUrl100 || "",
-    developer: app.artistName || "Unknown Developer",
-  };
 }
