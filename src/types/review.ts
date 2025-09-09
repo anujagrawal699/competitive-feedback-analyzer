@@ -42,7 +42,6 @@ export interface CompetitiveInsight {
   description: string;
   evidence: string[]; // brief strings referencing themes or ratings
   priority: "high" | "medium" | "low";
-  // Extended structured fields for richer visualization (all optional)
   theme?: string; // primary theme referenced
   yourRating?: number;
   competitorRating?: number;
@@ -79,7 +78,7 @@ export interface MarketPosition {
 
 export interface CompetitiveAnalysis {
   yourApp: AppAnalysis;
-  competitor: AppAnalysis; // single competitor instead of array
+  competitor: AppAnalysis;
   insights: CompetitiveInsight[];
   recommendations: Recommendation[];
   marketPosition: MarketPosition;

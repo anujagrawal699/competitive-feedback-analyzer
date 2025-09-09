@@ -31,7 +31,6 @@ async function analyzeSingleApp(appId: string, source: "google-play" | "app-stor
   const totalRatings = reviews.reduce((s,r)=>s+r.rating,0);
   const averageRating = reviews.length ? totalRatings / reviews.length : 0;
   const clusters = await analyzeReviewsWithAI(reviews);
-  clusters.sort((a,b)=>b.count-a.count);
 
   return {
     appId,

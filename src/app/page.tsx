@@ -109,14 +109,14 @@ export default function Home() {
                 {analysis && (
                   <button
                     onClick={() => setAnalysis(null)}
-                    className="px-3 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 text-sm hover:bg-slate-100"
+                    className="px-3 flex items-center justify-center rounded-lg py-2 border border-slate-200 bg-white text-slate-600 text-sm hover:bg-slate-100"
                   >
                     <RefreshCw className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
-            {/* Helper examples inline */}
+            {/* Error message */}
             {error && (
               <div className="mt-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
                 {error}
@@ -189,7 +189,7 @@ export default function Home() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   💡 <strong>Tips:</strong> Compare direct competitors for sharper insights. Find app IDs in store URLs.
                 </p>
-                <p className="text-[10px] text-slate-300">
+                <p className="text-[10px] text-slate-400">
                   Google Play: play.google.com/store/apps/details?id=<strong>com.example.app</strong><br/>
                   App Store: apps.apple.com/app/id<strong>123456789</strong>
                 </p>

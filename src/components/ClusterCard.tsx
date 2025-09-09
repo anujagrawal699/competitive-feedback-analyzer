@@ -36,7 +36,7 @@ export default function ClusterCard({ cluster, rank, snippetChars = 200, titleSu
       
       {cluster.reviews.length > 0 && (
         <div className="space-y-2">
-          <h5 className="text-sm font-medium text-gray-900">Sample Reviews:</h5>
+          <h5 className="text-sm font-medium text-gray-900">Reviews:</h5>
           <div className="space-y-2">
             {cluster.reviews.slice(0, 3).map((review) => (
               <div key={review.id} className="bg-gray-50 rounded p-3 text-sm">
